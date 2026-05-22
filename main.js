@@ -514,10 +514,7 @@ function calculate() {
     const { result, steps } = binarySub(aRaw, bRaw);
     resultBin = result;
     stepsHTML = buildSubSteps(aRaw, bRaw, result, steps);
-    // Resultado negativo: decodificar C2 para obtener el valor decimal
-    decResult = steps.negative
-      ? -parseInt(complement2(result, result.length), 2)
-      : parseInt(result, 2);
+    decResult = steps.decValue;
   } else {
     const { result, steps } = binaryMul(aRaw, bRaw);
     resultBin = result;
@@ -630,31 +627,22 @@ function binarySub(aStr, bStr) {
   const carryOut = carries[len];
   const sumResult = resultBits.reverse().join(''); // exactamente len bits
 
-  let finalResult, negative;
-  if (carryOut === 1) {
-    // carry-out = 1 → resultado no negativo
-    finalResult = sumResult.replace(/^0+/, '') || '0';
-    negative = false;
-  } else if (sumResult === '0'.repeat(len)) {
-    finalResult = '0';
-    negative = false;
-  } else {
-    // carry-out = 0 → resultado negativo; C2 de la suma da la magnitud
-    finalResult = '-' + (complement2(sumResult, len).replace(/^0+/, '') || '0');
-    negative = true;
-  }
+  const negative = carryOut === 0 && sumResult !== '0'.repeat(len);
+  const decValue = negative
+    ? -parseInt(complement2(sumResult, len), 2)
+    : parseInt(sumResult, 2);
 
-  return { result: finalResult, steps: { aStr, bStr, len, c2b, sumResult, carryOut, negative } };
+  return { result: sumResult, steps: { aStr, bStr, len, c2b, sumResult, carryOut, negative, decValue } };
 }
 
 function buildSubSteps(aStr, bStr, result, steps) {
-  const { len, c2b, sumResult, carryOut, negative } = steps;
+  const { len, c2b, sumResult, carryOut, negative, decValue } = steps;
   const aPad = aStr.padStart(len, '0');
   const bPad = bStr.padStart(len, '0');
   const c1 = bPad.split('').map(b => b === '0' ? '1' : '0').join('');
   const decA = parseInt(aStr, 2);
   const decB = parseInt(bStr, 2);
-  const decResult = negative ? -parseInt(result.replace('-', ''), 2) : parseInt(result, 2);
+  const decResult = decValue;
 
   let html = `<div class="steps-title">Resta por Complemento a 2</div>`;
   html += `<div class="c2-step">
@@ -673,7 +661,7 @@ function buildSubSteps(aStr, bStr, result, steps) {
     ${carryOut === 1
       ? `Carry-out = <strong>1</strong> → resultado positivo (se descarta el carry de salida).<br>Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${decResult}`
       : negative
-        ? `Carry-out = <strong>0</strong> → resultado negativo. C2(<span class="hl-y">${sumResult}</span>) = <span class="hl-g">${result.replace('-','').padStart(len,'0')}</span>  → Resultado: <span style="color:var(--error)">${result}</span>  = ${decResult}`
+        ? `Carry-out = <strong>0</strong> → resultado negativo. C2(<span class="hl-y">${result}</span>) = <span class="hl-g">${complement2(result, len)}</span>  → Resultado: <span style="color:var(--error)">−${complement2(result, len)}</span>  = ${decResult}`
         : `Carry-out = <strong>0</strong>, resultado = <span class="hl-g">${'0'.repeat(len)}</span>  = 0`
     }
   </div>`;

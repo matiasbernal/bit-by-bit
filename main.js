@@ -132,6 +132,9 @@ function handleInput() {
 
   if (!val.trim()) { clearResults(); errEl.textContent = ''; input.classList.remove('error'); return; }
 
+  // El usuario todavía está escribiendo el signo negativo
+  if (val.trim() === '-') { clearResults(); errEl.textContent = ''; input.classList.remove('error'); return; }
+
   const cfg = modeConfig[currentMode];
   if (!cfg.validate(val)) {
     input.classList.add('error'); errEl.textContent = cfg.errMsg; clearResults(); return;

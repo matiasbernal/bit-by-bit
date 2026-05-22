@@ -146,6 +146,47 @@
     </div>
   </div>
 
+  <!-- ── COMPLEMENTO A 2 ── -->
+  <div class="c2conv-section">
+    <div class="c2conv-title">⊟ Complemento a 2 (C2)</div>
+    <div class="c2conv-card">
+      <div class="c2conv-top">
+        <div class="c2conv-input-wrap">
+          <div class="c2conv-label">Número a convertir</div>
+          <input type="text" class="op-input" id="c2c-input"
+            placeholder="Ej: −13  /  1101  /  42"
+            oninput="c2cHandleInput()" autocomplete="off" spellcheck="false"/>
+          <div class="c2c-detected" id="c2c-detected"></div>
+          <div class="error-msg" id="c2c-error"></div>
+        </div>
+        <div class="c2conv-bits-wrap">
+          <div class="c2conv-label">Registro (bits)</div>
+          <div class="c2conv-pills">
+            <button class="bits-pill" onclick="setC2cBits(this,4)">4</button>
+            <button class="bits-pill active" onclick="setC2cBits(this,8)">8</button>
+            <button class="bits-pill" onclick="setC2cBits(this,16)">16</button>
+            <button class="bits-pill" onclick="setC2cBits(this,0)">Auto</button>
+          </div>
+        </div>
+      </div>
+      <button class="calc-btn" onclick="calculateC2c()">Calcular C2</button>
+      <div class="c2c-result-wrap" id="c2c-result-wrap">
+        <div class="op-result-box">
+          <div class="op-result-label" id="c2c-res-label">Complemento a 2</div>
+          <div class="op-result-value" id="c2c-res-val">—</div>
+          <div class="op-result-dec" id="c2c-res-dec"></div>
+        </div>
+        <div class="op-steps-toggle" id="c2c-steps-toggle" onclick="toggleC2cSteps()">
+          <span>⚙ Ver proceso de cálculo</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="op-steps-wrap" id="c2c-steps-wrap">
+          <div class="op-steps-body" id="c2c-steps-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="ref-section">
     <div class="ref-title" id="ref-toggle" onclick="toggleRef()">
       <span>📋 Tabla de referencia rápida (0–15)</span>

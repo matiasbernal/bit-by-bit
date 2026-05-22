@@ -229,6 +229,25 @@ h1 {
 .ref-table td:nth-child(3) { color:var(--text); }
 .ref-table td:nth-child(4) { color:var(--text); }
 
+/* ── COMPLEMENTO A 2 ── */
+.c2conv-section { margin-top:40px; animation:fadeUp 0.6s 0.27s ease both; }
+.c2conv-title { font-size:1.2rem; font-weight:700; color:var(--text); margin-bottom:20px; display:flex; align-items:center; gap:10px; font-family:'Space Mono',monospace; text-transform:uppercase; letter-spacing:1px; }
+.c2conv-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.c2conv-card { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:32px; position:relative; overflow:hidden; }
+.c2conv-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--accent); }
+.c2conv-top { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:start; margin-bottom:20px; }
+.c2conv-input-wrap { display:flex; flex-direction:column; gap:8px; }
+.c2conv-bits-wrap { display:flex; flex-direction:column; gap:10px; }
+.c2conv-label { font-family:'Space Mono',monospace; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); }
+.c2conv-pills { display:flex; gap:6px; }
+.bits-pill { padding:10px 14px; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); font-family:'Space Mono',monospace; font-size:11px; font-weight:700; cursor:pointer; border-radius:4px; transition:all 0.2s; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+.bits-pill.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.bits-pill:hover:not(.active) { border-color:var(--accent); color:var(--accent); }
+.c2c-detected { font-family:'Space Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:1px; min-height:16px; }
+.c2c-result-wrap { margin-top:24px; display:none; }
+.c2c-result-wrap.show { display:block; }
+@media (max-width:600px) { .c2conv-top { grid-template-columns:1fr; } .c2conv-pills { flex-wrap:wrap; } }
+
 .toast {
   position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(60px);
   background:var(--accent); color:#0a0a0a; font-family:'Space Mono',monospace;

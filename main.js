@@ -731,3 +731,169 @@ function buildMulSteps(aStr, bStr, result, steps) {
     if (e.key === 'Enter') calculate();
   });
 });
+
+// ── COMPLEMENTO A 2 — SECCIÓN DEDICADA ──
+
+let c2cBits = 8;
+
+function setC2cBits(btn, bits) {
+  c2cBits = bits;
+  document.querySelectorAll('.bits-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (document.getElementById('c2c-input').value.trim()) calculateC2c();
+}
+
+function c2cDetect(v) {
+  if (/^-[1-9]\d*$/.test(v)) return 'dec-neg';
+  if (/^[01]+$/.test(v))      return 'bin';
+  if (/^\d+$/.test(v))        return 'dec-pos';
+  return null;
+}
+
+function decOfC2(binStr, bits) {
+  const p = binStr.padStart(bits, '0');
+  return p[0] === '0' ? parseInt(p, 2) : -parseInt(complement2(p, bits), 2);
+}
+
+function c2cHandleInput() {
+  const inp = document.getElementById('c2c-input');
+  const v = inp.value.trim();
+  const tag = document.getElementById('c2c-detected');
+  const errEl = document.getElementById('c2c-error');
+  errEl.textContent = '';
+  inp.classList.remove('error');
+  if (!v || v === '-') { tag.textContent = ''; return; }
+  const type = c2cDetect(v);
+  if (!type) {
+    tag.textContent = '';
+    inp.classList.add('error');
+    errEl.textContent = 'Formato inválido. Usá decimal (ej: −13, 42) o binario (ej: 1101)';
+    return;
+  }
+  const labels = { 'dec-neg': 'decimal negativo', 'dec-pos': 'decimal positivo', 'bin': 'binario' };
+  tag.textContent = '↳ detectado: ' + labels[type];
+}
+
+function calculateC2c() {
+  const inp = document.getElementById('c2c-input');
+  const errEl = document.getElementById('c2c-error');
+  const resWrap = document.getElementById('c2c-result-wrap');
+  const v = inp.value.trim();
+  errEl.textContent = '';
+  inp.classList.remove('error');
+
+  if (!v) { errEl.textContent = 'Ingresá un número para convertir'; return; }
+  const type = c2cDetect(v);
+  if (!type) {
+    inp.classList.add('error');
+    errEl.textContent = 'Formato inválido. Usá decimal (ej: −13, 42) o binario (ej: 1101)';
+    return;
+  }
+
+  const magnitude = type === 'dec-neg' ? Math.abs(parseInt(v, 10))
+                  : type === 'dec-pos' ? parseInt(v, 10)
+                  : parseInt(v, 2);
+
+  let bits = c2cBits === 0
+    ? (type === 'bin' ? Math.max(8, Math.ceil(v.length / 8) * 8) : getC2BitWidth(magnitude))
+    : c2cBits;
+
+  // Overflow check
+  if (type === 'bin') {
+    if (v.length > bits) {
+      inp.classList.add('error');
+      errEl.textContent = `El binario tiene ${v.length} bits pero el registro es de ${bits}`;
+      resWrap.classList.remove('show');
+      return;
+    }
+  } else {
+    const maxPos = Math.pow(2, bits - 1) - 1;
+    const minNeg = -Math.pow(2, bits - 1);
+    const numVal = type === 'dec-neg' ? -magnitude : magnitude;
+    if (numVal > maxPos || numVal < minNeg) {
+      inp.classList.add('error');
+      errEl.textContent = `Overflow: ${numVal} no entra en ${bits} bits (rango C2: ${minNeg} a ${maxPos})`;
+      resWrap.classList.remove('show');
+      return;
+    }
+  }
+
+  let c2result, stepsHtml, decLabel;
+
+  if (type === 'dec-neg') {
+    const binMag = magnitude.toString(2).padStart(bits, '0');
+    const c1 = binMag.split('').map(b => b === '0' ? '1' : '0').join('');
+    c2result = complement2(binMag, bits);
+    stepsHtml = buildC2cStepsNeg(v, magnitude, bits, binMag, c1, c2result);
+    decLabel = `Decimal: ${-magnitude}`;
+  } else if (type === 'bin') {
+    const binMag = v.padStart(bits, '0');
+    const c1 = binMag.split('').map(b => b === '0' ? '1' : '0').join('');
+    c2result = complement2(binMag, bits);
+    const inputDec = decOfC2(binMag, bits);
+    const resultDec = decOfC2(c2result, bits);
+    stepsHtml = buildC2cStepsBin(v, inputDec, bits, binMag, c1, c2result, resultDec);
+    decLabel = `Decimal: ${resultDec >= 0 ? '+' : ''}${resultDec}`;
+  } else {
+    c2result = magnitude.toString(2).padStart(bits, '0');
+    stepsHtml = buildC2cStepsPos(v, magnitude, bits, c2result);
+    decLabel = `Decimal: +${magnitude}`;
+  }
+
+  document.getElementById('c2c-res-label').textContent = `C2 en ${bits} bits`;
+  document.getElementById('c2c-res-val').textContent = c2result;
+  document.getElementById('c2c-res-dec').textContent = decLabel;
+  document.getElementById('c2c-steps-body').innerHTML = stepsHtml;
+  resWrap.classList.add('show');
+  document.getElementById('c2c-steps-toggle').classList.remove('open');
+  document.getElementById('c2c-steps-wrap').classList.remove('open');
+}
+
+function buildC2cStepsNeg(input, mag, bits, binMag, c1, c2res) {
+  return `<div class="c2-step">
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 1 — Magnitud en binario (${bits} bits)</strong><br><br>
+    |${input}| = ${mag}&nbsp;&nbsp;→&nbsp;&nbsp;<span class="hl-g">${binMag}</span><br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 2 — Complemento a 1 (invertir cada bit)</strong><br><br>
+    &nbsp;&nbsp;<span class="hl">${binMag}</span>  (magnitud)<br>
+    →&nbsp;<span class="hl-y">${c1}</span>  (C1: cada 0→1, cada 1→0)<br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 3 — Sumar 1 al C1</strong><br><br>
+    &nbsp;&nbsp;<span class="hl-y">${c1}</span><br>
+    +&nbsp;<span class="hl">${'0'.repeat(bits - 1)}1</span><br>
+    &nbsp;&nbsp;${'─'.repeat(bits + 2)}<br>
+    &nbsp;&nbsp;<span class="hl-g">${c2res}</span>&nbsp;&nbsp;← C2(${input}) en ${bits} bits
+  </div>`;
+}
+
+function buildC2cStepsBin(input, inputDec, bits, binMag, c1, c2res, resultDec) {
+  return `<div class="c2-step">
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 1 — Número binario en registro de ${bits} bits</strong><br><br>
+    <span class="hl">${input}</span>&nbsp;(C2: ${inputDec >= 0 ? '+' : ''}${inputDec})&nbsp;&nbsp;→&nbsp;&nbsp;<span class="hl-g">${binMag}</span>  (rellenado a ${bits} bits)<br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 2 — Complemento a 1 (invertir cada bit)</strong><br><br>
+    &nbsp;&nbsp;<span class="hl">${binMag}</span><br>
+    →&nbsp;<span class="hl-y">${c1}</span>  (C1)<br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 3 — Sumar 1 al C1</strong><br><br>
+    &nbsp;&nbsp;<span class="hl-y">${c1}</span><br>
+    +&nbsp;<span class="hl">${'0'.repeat(bits - 1)}1</span><br>
+    &nbsp;&nbsp;${'─'.repeat(bits + 2)}<br>
+    &nbsp;&nbsp;<span class="hl-g">${c2res}</span>&nbsp;&nbsp;← C2(${input}) = ${resultDec >= 0 ? '+' : ''}${resultDec} en ${bits} bits
+  </div>`;
+}
+
+function buildC2cStepsPos(input, mag, bits, c2res) {
+  return `<div class="c2-step">
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">Número positivo — representación directa en C2</strong><br><br>
+    ${input} es positivo. En C2 los positivos se representan directamente<br>
+    en binario natural, rellenando con 0s a la izquierda (MSB = 0 → signo +):<br><br>
+    ${mag}&nbsp;(decimal)&nbsp;&nbsp;→&nbsp;&nbsp;<span class="hl-g">${c2res}</span>&nbsp;&nbsp;(${bits} bits)<br><br>
+    <span style="font-size:12px;color:var(--text-muted)">Rango representable con ${bits} bits: ${-Math.pow(2,bits-1)} a ${Math.pow(2,bits-1)-1}</span>
+  </div>`;
+}
+
+function toggleC2cSteps() {
+  document.getElementById('c2c-steps-toggle').classList.toggle('open');
+  document.getElementById('c2c-steps-wrap').classList.toggle('open');
+}
+
+document.getElementById('c2c-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') calculateC2c();
+});

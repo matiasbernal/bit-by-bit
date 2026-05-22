@@ -627,7 +627,7 @@ function binarySub(aStr, bStr) {
   const carryOut = carries[len];
   const sumResult = resultBits.reverse().join(''); // exactamente len bits
 
-  const negative = carryOut === 0 && sumResult !== '0'.repeat(len);
+  const negative = sumResult[0] === '1';
   const decValue = negative
     ? -parseInt(complement2(sumResult, len), 2)
     : parseInt(sumResult, 2);
@@ -656,13 +656,13 @@ function buildSubSteps(aStr, bStr, result, steps) {
     &nbsp;&nbsp;<span class="hl">${aPad}</span>  (A = ${decA})<br>
     ＋&nbsp;<span class="hl-g">${c2b}</span>  (C2(B))<br>
     ${'─'.repeat(len+4)}<br>
-    &nbsp;&nbsp;<span style="color:var(--accent3)">${sumResult}</span>&nbsp;&nbsp;<span style="font-size:10px;color:var(--text-muted)">carry-out = <strong style="color:${carryOut ? 'var(--accent4)' : 'var(--error)'}">${carryOut}</strong></span><br><br>
-    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 3 — Interpretar resultado</strong><br><br>
-    ${carryOut === 1
-      ? `Carry-out = <strong>1</strong> → resultado positivo (se descarta el carry de salida).<br>Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${decResult}`
-      : negative
-        ? `Carry-out = <strong>0</strong> → resultado negativo. C2(<span class="hl-y">${result}</span>) = <span class="hl-g">${complement2(result, len)}</span>  → Resultado: <span style="color:var(--error)">−${complement2(result, len)}</span>  = ${decResult}`
-        : `Carry-out = <strong>0</strong>, resultado = <span class="hl-g">${'0'.repeat(len)}</span>  = 0`
+    &nbsp;&nbsp;<span style="color:var(--accent3)">${sumResult}</span>&nbsp;&nbsp;<span style="font-size:10px;color:var(--text-muted)">carry-out = <strong>${carryOut}</strong> (indicador técnico del sumador)</span><br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 3 — Interpretar resultado (por MSB)</strong><br><br>
+    ${sumResult === '0'.repeat(len)
+      ? `MSB = <strong>0</strong>, resultado = <span class="hl-g">${'0'.repeat(len)}</span>  = 0`
+      : sumResult[0] === '0'
+        ? `MSB = <strong>0</strong> → resultado positivo.<br>Resultado: <span class="hl-g">${sumResult}</span>  = ${decResult}`
+        : `MSB = <strong>1</strong> → resultado negativo. C2(<span class="hl-y">${sumResult}</span>) = <span class="hl-g">${complement2(sumResult, len)}</span>  → Resultado: <span style="color:var(--error)">−${complement2(sumResult, len)}</span>  = ${decResult}`
     }
   </div>`;
   return html;

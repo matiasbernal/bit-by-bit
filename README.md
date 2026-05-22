@@ -6,4 +6,4 @@
     -  Resta
     -  Multiplicacion
 
-https://matiasbernal.github.io/conversor-bases/
+https://matiasbernal.github.io/bit-by-bit/

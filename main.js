@@ -150,9 +150,16 @@ function handleInput() {
   hasDecimalPart    = currentFracPart > 1e-12;
 
   results.dec = convertNumber(floatValue, 10).replace('.', ',');
-  results.bin = convertNumber(floatValue, 2).replace('.', ',');
   results.hex = convertNumber(floatValue, 16).replace('.', ',');
   results.oct = convertNumber(floatValue, 8).replace('.', ',');
+
+  // Binario negativo sin parte fraccionaria → mostrar Complemento a 2
+  if (currentIsNegative && !hasDecimalPart) {
+    const bitWidth = getC2BitWidth(currentIntPart);
+    results.bin = complement2(currentIntPart.toString(2), bitWidth);
+  } else {
+    results.bin = convertNumber(floatValue, 2).replace('.', ',');
+  }
 
   document.getElementById('res-dec').textContent = results.dec;
   document.getElementById('res-bin').textContent = results.bin;
@@ -349,9 +356,13 @@ function buildBaseSteps(base, type) {
     });
     html += `</tbody></table>`;
     const rems = steps.map(s => base===16 ? HEX_CHARS[s.remainder] : s.remainder);
+    const magStr = rems.slice().reverse().join('');
+    const readResult = (currentIsNegative && !hasDecimalPart && type === 'bin')
+      ? `${magStr} <span style="color:var(--text-muted)">(→ aplicar C2, ver paso ③)</span>`
+      : `${currentIsNegative && type !== 'bin' ? '−' : ''}${magStr}`;
     html += `<div class="read-order">📖 Leé los restos de <strong>abajo ↑ hacia arriba</strong>:<br>
       <span style="color:var(--text);font-weight:700;letter-spacing:2px">${rems.slice().reverse().join(' ')}</span>
-      &nbsp;→&nbsp;<span style="color:var(--text)">${currentIsNegative ? '−' : ''}${rems.slice().reverse().join('')}</span>
+      &nbsp;→&nbsp;<span style="color:var(--text)">${readResult}</span>
     </div>`;
   }
 
@@ -492,20 +503,27 @@ function calculate() {
   if (!validateBin(aRaw)) { inA.classList.add('error'); errEl.textContent = 'Operando A: solo se permiten 0 y 1.'; return; }
   if (!validateBin(bRaw)) { inB.classList.add('error'); errEl.textContent = 'Operando B: solo se permiten 0 y 1.'; return; }
 
-  let resultBin, stepsHTML;
+  let resultBin, stepsHTML, decResult;
 
   if (currentOp === 'sum') {
     const { result, steps } = binaryAdd(aRaw, bRaw);
-    resultBin = result; stepsHTML = buildSumSteps(aRaw, bRaw, result, steps);
+    resultBin = result;
+    stepsHTML = buildSumSteps(aRaw, bRaw, result, steps);
+    decResult = parseInt(result, 2);
   } else if (currentOp === 'sub') {
     const { result, steps } = binarySub(aRaw, bRaw);
-    resultBin = result; stepsHTML = buildSubSteps(aRaw, bRaw, result, steps);
+    resultBin = result;
+    stepsHTML = buildSubSteps(aRaw, bRaw, result, steps);
+    // Resultado negativo: decodificar C2 para obtener el valor decimal
+    decResult = steps.negative
+      ? -parseInt(complement2(result, result.length), 2)
+      : parseInt(result, 2);
   } else {
     const { result, steps } = binaryMul(aRaw, bRaw);
-    resultBin = result; stepsHTML = buildMulSteps(aRaw, bRaw, result, steps);
+    resultBin = result;
+    stepsHTML = buildMulSteps(aRaw, bRaw, result, steps);
+    decResult = parseInt(result, 2);
   }
-
-  const decResult = parseInt(resultBin.replace(/^-/, ''), 2) * (resultBin.startsWith('-') ? -1 : 1);
   document.getElementById('op-res-bin').textContent = resultBin;
   document.getElementById('op-res-dec').textContent = `Decimal: ${decResult}`;
   document.getElementById('op-steps-body').innerHTML = stepsHTML;
@@ -594,16 +612,16 @@ function binarySub(aStr, bStr) {
 
   let finalResult, negative;
   if (sumResult.length > len) {
+    // Resultado positivo: descartar el bit de carry
     finalResult = sumResult.slice(sumResult.length - len).replace(/^0+/, '') || '0';
     negative = false;
+  } else if (sumResult[0] === '1') {
+    // Resultado negativo: sumResult ya ES la representación en C2
+    finalResult = sumResult.padStart(len, '0');
+    negative = true;
   } else {
-    if (sumResult[0] === '1') {
-      finalResult = '-' + complement2(sumResult, len).replace(/^0+/, '') || '0';
-      negative = true;
-    } else {
-      finalResult = sumResult.replace(/^0+/, '') || '0';
-      negative = false;
-    }
+    finalResult = sumResult.replace(/^0+/, '') || '0';
+    negative = false;
   }
 
   return { result: finalResult, steps: { aStr, bStr, len, c2b, sumResult, negative } };
@@ -632,8 +650,8 @@ function buildSubSteps(aStr, bStr, result, steps) {
     ${sumResult.length > len
       ? `Se descarta el bit más significativo (overflow positivo).<br>Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${parseInt(result,2)}`
       : negative
-        ? `El bit más significativo es 1 → resultado negativo.<br>Se aplica C2 nuevamente para obtener la magnitud.<br>Resultado: <span style="color:var(--error)">${result}</span>`
-        : `Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${parseInt(result.replace('-',''),2)}`
+        ? `El bit más significativo es 1 → resultado negativo en Complemento a 2.<br>Resultado (C2): <span style="color:var(--error)">${result}</span>  = ${-parseInt(complement2(result, result.length), 2)}`
+        : `Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${parseInt(result,2)}`
     }
   </div>`;
   return html;

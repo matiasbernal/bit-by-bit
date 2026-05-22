@@ -601,57 +601,80 @@ function buildSumSteps(aStr, bStr, result, steps) {
 function complement2(binStr, len) {
   const padded = binStr.padStart(len, '0');
   const c1 = padded.split('').map(b => b === '0' ? '1' : '0').join('');
-  const { result } = binaryAdd(c1, '1');
-  return result.padStart(len, '0');
+  // Incremento fijo sin depender de binaryAdd (evita bits extra por el +1 interno)
+  const bits = c1.split('').map(Number);
+  let carry = 1;
+  for (let i = bits.length - 1; i >= 0 && carry; i--) {
+    const s = bits[i] + carry;
+    bits[i] = s % 2;
+    carry = Math.floor(s / 2);
+  }
+  return bits.join(''); // exactamente len bits, carry-out descartado
 }
 
 function binarySub(aStr, bStr) {
-  const len = Math.max(aStr.length, bStr.length) + 1;
-  const c2b = complement2(bStr, len);
-  const { result: sumResult, steps: sumSteps } = binaryAdd(aStr.padStart(len,'0'), c2b);
+  const len = Math.max(aStr.length, bStr.length); // ancho fijo, sin +1
+  const aPad = aStr.padStart(len, '0');
+  const c2b  = complement2(bStr, len);
+
+  // Suma dentro del registro fijo, carry-out separado
+  const aArr = aPad.split('').map(Number).reverse();
+  const bArr = c2b.split('').map(Number).reverse();
+  const resultBits = [];
+  const carries = [0];
+  for (let i = 0; i < len; i++) {
+    const s = aArr[i] + bArr[i] + carries[i];
+    resultBits.push(s % 2);
+    carries.push(Math.floor(s / 2));
+  }
+  const carryOut = carries[len];
+  const sumResult = resultBits.reverse().join(''); // exactamente len bits
 
   let finalResult, negative;
-  if (sumResult.length > len) {
-    // Resultado positivo: descartar el bit de carry
-    finalResult = sumResult.slice(sumResult.length - len).replace(/^0+/, '') || '0';
-    negative = false;
-  } else if (sumResult[0] === '1') {
-    // Resultado negativo: sumResult ya ES la representación en C2
-    finalResult = sumResult.padStart(len, '0');
-    negative = true;
-  } else {
+  if (carryOut === 1) {
+    // carry-out = 1 → resultado no negativo
     finalResult = sumResult.replace(/^0+/, '') || '0';
     negative = false;
+  } else if (sumResult === '0'.repeat(len)) {
+    finalResult = '0';
+    negative = false;
+  } else {
+    // carry-out = 0 → resultado negativo; C2 de la suma da la magnitud
+    finalResult = '-' + (complement2(sumResult, len).replace(/^0+/, '') || '0');
+    negative = true;
   }
 
-  return { result: finalResult, steps: { aStr, bStr, len, c2b, sumResult, negative } };
+  return { result: finalResult, steps: { aStr, bStr, len, c2b, sumResult, carryOut, negative } };
 }
 
 function buildSubSteps(aStr, bStr, result, steps) {
-  const { len, c2b, sumResult, negative } = steps;
+  const { len, c2b, sumResult, carryOut, negative } = steps;
   const aPad = aStr.padStart(len, '0');
   const bPad = bStr.padStart(len, '0');
   const c1 = bPad.split('').map(b => b === '0' ? '1' : '0').join('');
+  const decA = parseInt(aStr, 2);
+  const decB = parseInt(bStr, 2);
+  const decResult = negative ? -parseInt(result.replace('-', ''), 2) : parseInt(result, 2);
 
   let html = `<div class="steps-title">Resta por Complemento a 2</div>`;
   html += `<div class="c2-step">
-    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 1 — Convertir B a Complemento a 2</strong><br><br>
-    B original:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">${bPad}</span>  (= ${parseInt(bStr,2)})<br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 1 — Convertir B a Complemento a 2 (${len} bits)</strong><br><br>
+    B original:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">${bPad}</span>  (= ${decB})<br>
     Complemento a 1:&nbsp;<span class="hl-y">${c1}</span>  (invertir cada bit)<br>
     Sumar 1:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl-y">+&nbsp;${'0'.repeat(len-1)}1</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${'─'.repeat(len+2)}<br>
-    Complemento a 2:&nbsp;<span class="hl-g">${c2b.padStart(len,'0')}</span><br><br>
-    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 2 — Sumar A + C2(B)</strong><br><br>
-    &nbsp;&nbsp;<span class="hl">${aPad}</span>  (A = ${parseInt(aStr,2)})<br>
-    ＋&nbsp;<span class="hl-g">${c2b.padStart(len,'0')}</span>  (C2(B))<br>
+    Complemento a 2:&nbsp;<span class="hl-g">${c2b}</span><br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 2 — Sumar A + C2(B) en ${len} bits</strong><br><br>
+    &nbsp;&nbsp;<span class="hl">${aPad}</span>  (A = ${decA})<br>
+    ＋&nbsp;<span class="hl-g">${c2b}</span>  (C2(B))<br>
     ${'─'.repeat(len+4)}<br>
-    &nbsp;&nbsp;<span style="color:var(--accent3)">${sumResult.padStart(len+1,'0')}</span><br><br>
-    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 3 — Descartar bit de overflow</strong><br><br>
-    ${sumResult.length > len
-      ? `Se descarta el bit más significativo (overflow positivo).<br>Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${parseInt(result,2)}`
+    &nbsp;&nbsp;<span style="color:var(--accent3)">${sumResult}</span>&nbsp;&nbsp;<span style="font-size:10px;color:var(--text-muted)">carry-out = <strong style="color:${carryOut ? 'var(--accent4)' : 'var(--error)'}">${carryOut}</strong></span><br><br>
+    <strong style="color:var(--text-muted);font-size:9px;letter-spacing:2px">PASO 3 — Interpretar resultado</strong><br><br>
+    ${carryOut === 1
+      ? `Carry-out = <strong>1</strong> → resultado positivo (se descarta el carry de salida).<br>Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${decResult}`
       : negative
-        ? `El bit más significativo es 1 → resultado negativo en Complemento a 2.<br>Resultado (C2): <span style="color:var(--error)">${result}</span>  = ${-parseInt(complement2(result, result.length), 2)}`
-        : `Resultado: <span class="hl-g">${result.padStart(len,'0')}</span>  = ${parseInt(result,2)}`
+        ? `Carry-out = <strong>0</strong> → resultado negativo. C2(<span class="hl-y">${sumResult}</span>) = <span class="hl-g">${result.replace('-','').padStart(len,'0')}</span>  → Resultado: <span style="color:var(--error)">${result}</span>  = ${decResult}`
+        : `Carry-out = <strong>0</strong>, resultado = <span class="hl-g">${'0'.repeat(len)}</span>  = 0`
     }
   </div>`;
   return html;

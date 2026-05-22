@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" remote add origin https://github.com/matiasbernal/conversor-bases.git)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" push -u origin main)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" rebase origin/main)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" checkout --theirs index.html)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" add index.html styles.css main.js)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" rebase --continue)",
+      "Bash(del \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\\\\v2.html\")",
+      "PowerShell(Remove-Item \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\\\\v2.html\" -Confirm:$false)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" add main.js)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" rm v2.html)",
+      "Bash(git -C 'e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main' commit -m ' *)",
+      "Bash(git -C \"e:\\\\MATIAS\\\\Programas\\\\conversor-bases-main\" push)"
+    ]
+  }
+}
